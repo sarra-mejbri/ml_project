@@ -40,6 +40,20 @@ def _run(cmd, allow_fail=False):
     return result.returncode
 
 
+REPO_URL = "https://github.com/sarra-mejbri/ml_project.git"
+
+
+@task(name="fetch-repo")
+def fetch_repo():
+    logger = get_run_logger()
+    if (PROJECT_DIR / ".git").exists():
+        logger.info("Dépôt présent : récupération des dernières modifications")
+        _run(["git", "pull", "origin", "main"], allow_fail=True)
+    else:
+        logger.info("Dépôt absent : clonage depuis %s", REPO_URL)
+        _run(["git", "clone", REPO_URL, "."], allow_fail=True)
+
+
 # ---------------------------------------------------------------------------
 # Tasks - dépendances
 # ---------------------------------------------------------------------------
@@ -131,12 +145,13 @@ def flow_evaluate():
 
 @flow(name="all", log_prints=True)
 def flow_all():
-    install_dependencies()
+    fetch_repo()  # 0 - récupération du projet
+    install_dependencies()  # 1
     flow_code()  # étapes code AVANT la data
     X_train, X_test, y_train, y_test = task_prepare_data()  # 2
     model = task_train_model(X_train, y_train)  # 3
     task_save_model(model)  # 4
-    task_evaluate_model(model, X_test, y_test)  # 6
+    task_evaluate_model(model, X_test, y_test)
 
 
 FLOWS = {
